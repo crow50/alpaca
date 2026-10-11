@@ -6,7 +6,7 @@
  * 
  * examples:
  *      graphAllVulns 'filename.dot'
- *      createRangeFromIGS '[Goal]' '[InitialState]' '[Params]'
+ *      createRangeFromIGS '[InitialState]' '[Goal]' '[Params]'
  */
 
 main :-
@@ -27,13 +27,13 @@ parseArgs([Pred, Filename]) :-
     call(Run).
 % Used for createRangeFromIGS
 parseArgs([Pred|Rest]) :-
-    argsToTerm(Rest, Goal, Initial, Params),
+    argsToTerm(Rest, Initial, Goal, Params),
     current_predicate(Pred/3),
-    Run =.. [Pred, Goal, Initial, Params],
+    Run =.. [Pred, Initial, Goal, Params],
     call(Run).
 
-argsToTerm([ArgsGoal, ArgsInitial, ArgsParams], Goal, Initial, Params) :-
-    term_to_atom(Goal, ArgsGoal),
+argsToTerm([ArgsInitial, ArgsGoal, ArgsParams], Initial, Goal, Params) :-
     term_to_atom(Initial, ArgsInitial),
+    term_to_atom(Goal, ArgsGoal),
     term_to_atom(Params, ArgsParams).
 
