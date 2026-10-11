@@ -123,15 +123,25 @@ real shell (`whoami` -> that user, `uid=1000`).
   before Ansible ever runs. This target has no equivalent preseed step, so without this it
   fails with `Destination /etc/ssh/sshd_config does not exist`. Fixed in the script, not the
   shared role, per this feature's "don't rewrite the roles" design (see top of this file).
-- **Occasionally, a run fails partway with an odd Ansible error** (seen in testing:
-  `Module result deserialization failed`, `rc=137`; a MySQL auth failure on the import task)
-  on a machine that's under memory pressure -- `rc=137` specifically means a module got
-  SIGKILLed, almost always the OOM killer. This showed up intermittently after extended,
-  heavy, concurrent Docker use on one test machine, not on a clean run. If a run fails, check
-  memory headroom and just retry -- the script always cleans up its own target container on
-  exit now (success or failure), so a retry won't collide with the previous attempt's
-  container or port.
-- **The target doesn't auto-start services on package install.** The base image
+- **Occasionally, a run fails partway with `Module result deserialization failed` / `rc=137`**
+  on a machine that's under memory pressure -- `rc=137` means a module got SIGKILLed, almost
+  always the OOM killer. Showed up intermittently after extended, heavy, concurrent Docker use
+  on one test machine, not on a clean run. If a run fails this way, check memory headroom and
+  just retry -- the script always cleans up its own target container on exit now (success or
+  failure), so a retry won't collide with the previous attempt's container or port.
+  (An earlier version of this note also blamed a MySQL "Access denied" failure on the import
+  task on memory pressure -- that one turned out to be a real, deterministic bug, not a
+  resource flake: see the next bullet.)
+- **`ansible/roles/mysql/templates/my.cnf.j2` quotes the root password.** The generator's
+  charset (`prolog/configs.pl`) includes `#`, which MySQL's `.cnf` file format treats as a
+  comment starter -- an unquoted `password={{ mysql.root.0 }}` silently truncated any
+  generated password at its first `#`, so `~/.my.cnf` held the wrong password and the very
+  next task (`Import MySQL databases`) failed with "Access denied... (using password: YES)".
+  This wasn't rare: with this password charset, any given password has roughly a 1-in-6 chance
+  of containing at least one `#`. Confirmed by reproducing it, inspecting the live container's
+  `mysql.user` table and the literal bytes Ansible wrote to `.my.cnf`, and fixing it with a
+  quoted `password="{{ mysql.root.0 }}"`. This affects every path that reads this template, not
+  just Docker -- the same fix applies on the Packer/VirtualBox VM.
   (`geerlingguy/docker-ubuntu2204-ansible`) ships a `policy-rc.d` that blocks the
   package-manager's own auto-start hooks, which is normal for Ansible-testing images --
   automated provisioning wants services started deterministically by the playbook, not raced by
