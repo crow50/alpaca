@@ -2,17 +2,27 @@
 :- use_module(library(uuid)).
 :- use_module(library(http/json)).
 
+% Resolve relative paths against this file's own directory (prolog/), not the caller's CWD.
+:- prolog_load_context(directory, ThisDir),
+   nb_setval(alpaca_output_dir, ThisDir).
+
+alpacaPath(Rel, Abs) :-
+    nb_getval(alpaca_output_dir, ThisDir),
+    atomic_list_concat([ThisDir, '/', Rel], RelFull),
+    absolute_file_name(RelFull, Abs).
+
 outputRange(InitialState, Goal, Params, Lattices) :-
     uuid(RangeId, [version(4)]),
     format("Creating range ~s~n", [RangeId]),
-    format(atom(RangeDirRel), "../ranges/~s", [RangeId]),
-    absolute_file_name(RangeDirRel, RangeDir),
+    format(atom(RangeRel), "../ranges/~s", [RangeId]),
+    alpacaPath(RangeRel, RangeDir),
     make_directory_path(RangeDir),
     findall((LatticeId, Lattice), (member(Lattice, Lattices), uuid(LatticeId, [version(4)])), LatticesWithIds),
     outputRangeMetadata(RangeDir, RangeId, InitialState, Goal, Params, LatticesWithIds),
     printLattices(LatticesWithIds), nl,
     maplist(outputLattice(RangeDir, RangeId), LatticesWithIds),
-    working_directory(OrigWD, "../ranges"),
+    file_directory_name(RangeDir, RangesDir),
+    working_directory(OrigWD, RangesDir),
     format(atom(Command), "zip -r ~s.zip ~s", [RangeId, RangeId]),
     shell(Command),
     working_directory(_, OrigWD).
@@ -54,10 +64,10 @@ outputLattice(RangeDir, RangeId, (LatticeId, Lattice)) :-
     make_directory_path(LatticeDir),
     % link packer files
     format(atom(LatticePackerDir), "~s/packer", [LatticeDir]),
-    absolute_file_name("../packer", PackerDir),
+    alpacaPath('../packer', PackerDir),
     link_file(PackerDir, LatticePackerDir, symbolic),
     format(atom(LatticePackerScript), "~s/run_packer.sh", [LatticeDir]),
-    absolute_file_name("../run_packer.sh", PackerScript),
+    alpacaPath('../run_packer.sh', PackerScript),
     link_file(PackerScript, LatticePackerScript, symbolic),
     generatePNGFromLattice(LatticeDir, Lattice),
     Lattice = (Configs, _),
@@ -65,7 +75,7 @@ outputLattice(RangeDir, RangeId, (LatticeId, Lattice)) :-
 
 createYamlFiles(Configs, LatticeDir) :-
     format(atom(AnsibleDir), "~s/roles", [LatticeDir]),
-    absolute_file_name("../ansible/roles", ParentAnsibleDir),
+    alpacaPath('../ansible/roles', ParentAnsibleDir),
     link_file(ParentAnsibleDir, AnsibleDir, symbolic),
     print(ParentAnsibleDir),nl,
 	formatRoles(Configs, Roles),
@@ -100,12 +110,26 @@ listKeys([Key-(_, Vals)|Rest], String) :-
 	listKeys(Rest, String2),
 	format(atom(String), "~s~s", [Out, String2]).
 
+% Quote scalars so YAML doesn't auto-type "Yes"/digits as bool/int (broke allowrootlogin's "Yes" check).
+yamlEscapeChar(0'\\, "\\\\") :- !.
+yamlEscapeChar(0'", "\\\"") :- !.
+yamlEscapeChar(C, S) :- string_codes(S, [C]).
+
+yamlQuote(Val, Quoted) :-
+	format(atom(ValAtom), "~w", [Val]),
+	atom_codes(ValAtom, Codes),
+	maplist(yamlEscapeChar, Codes, EscapedParts),
+	atomic_list_concat(EscapedParts, '', Escaped),
+	format(atom(Quoted), "\"~s\"", [Escaped]).
+
 listVals([], "").
 listVals([Val|Vals], String) :-
 	listVals(Vals, String1),
-	format(atom(String), "~t~10|- ~s~n~s", [Val, String1]).
+	yamlQuote(Val, QuotedVal),
+	format(atom(String), "~t~10|- ~s~n~s", [QuotedVal, String1]).
 listVals(Val, String) :-
-	format(atom(String), "~t~10|- ~s~n", [Val]).
+	yamlQuote(Val, QuotedVal),
+	format(atom(String), "~t~10|- ~s~n", [QuotedVal]).
 
 % swipl repl helpers
 printLattices([]).

@@ -3,17 +3,17 @@
   when: users.root is defined
   user:
     name: root
-    password: "{{ users.root.0 }}"
+    password: "{{ users.root.0 | password_hash('sha512') }}"
     update_password: always
 
 - name: Create local users
   become: true
-  when: ssh.users is defined and ssh.passwords is defined
+  when: users.logins is defined and users.passwords is defined
   user:
     name: "{{ item.0 }}"
-    password: "{{ item.1 }}"
+    password: "{{ item.1 | password_hash('sha512') }}"
     state: present
-    shell: /bin/bash   
+    shell: /bin/bash
   with_together:
     - "{{ users.logins }}"
     - "{{ users.passwords }}"

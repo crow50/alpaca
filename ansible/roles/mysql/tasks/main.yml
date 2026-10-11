@@ -12,13 +12,13 @@
     state: started
     enabled: true
 
-#- name: Set MySQL root password
-#  when: mysql.root is defined
-#  mysql_user: 
-#    name: root 
-#    password: "{{ mysql.root.0 }}"
-#    priv: "*.*:ALL,GRANT"
-#    login_unix_socket: "/var/run/mysqld/mysqld.sock"
+- name: Set MySQL root password
+  when: mysql.root is defined
+  mysql_user:
+    name: root
+    password: "{{ mysql.root.0 }}"
+    priv: "*.*:ALL,GRANT"
+    login_unix_socket: "/var/run/mysqld/mysqld.sock"
 
 - name: Copy my.cnf file
   when: mysql.root is defined

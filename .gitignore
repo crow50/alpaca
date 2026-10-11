@@ -1,7 +1,6 @@
 /ansible/playbook.yml
 *.gv
 *.png
-*[0-9]
 .vagrant
 /.metadata/
 *.properties

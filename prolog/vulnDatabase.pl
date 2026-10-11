@@ -43,7 +43,7 @@ vuln('scan-http', [], [http],
 
 vuln('find-login-page', [http], [php_webapp, login_page],
         [apache-[modules-(exists, ["libapache2-mod-php"])],
-        php-[deployments-(exists, ["loginpage1"])],
+        php-[deployments-(exists, ["loginpage1-badsql"])],
         mysql-[db-(exists, ["logindb1"]),
                root-(only, [generatePassword])]]).
 
