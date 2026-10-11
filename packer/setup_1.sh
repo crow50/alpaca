@@ -6,10 +6,10 @@ set -x
 set -e
 
 cat > "/etc/apt/sources.list" << EOF
-deb http://mirror.picosecond.org/ubuntu/ bionic main restricted universe multiverse
-deb http://mirror.picosecond.org/ubuntu/ bionic-updates main restricted universe multiverse
-deb http://mirror.picosecond.org/ubuntu/ bionic-backports main restricted universe multiverse
-deb http://mirror.picosecond.org/ubuntu/ bionic-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ bionic main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ bionic-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ bionic-backports main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu/ bionic-security main restricted universe multiverse
 EOF
 
 # Perform an update and full upgrade.
