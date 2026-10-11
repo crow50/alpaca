@@ -82,6 +82,9 @@ gets tagged accordingly:
   a version-coupled step (e.g. the vsftpd backdoor, or SSH root-enable) as working on this
   specific image; the printed output says exactly which step(s) to avoid.
 
+See [`../review/EXPECTED-SOLUTIONS.md`](../review/EXPECTED-SOLUTIONS.md) for the full
+pattern-by-pattern verification status (all 21 active `vuln/4` facts, not just the ones below).
+
 **Current scope**: apache/php/mysql-based lattices (flagship: `web_admin_access`) are the
 launched, Docker-verified set -- confirmed end-to-end, including the actual vulnerable login
 page serving correctly (real SQL injection against `app/Models/Access.php`, verified with raw

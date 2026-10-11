@@ -116,6 +116,14 @@ or run `make docker-provision LATTICE=ranges/<range-id>/<lattice-id>` (or
 See [`AGENTS.md`](AGENTS.md) -- it's written as a self-contained recipe (for a person or an
 agent) and isn't duplicated here.
 
+## Does each vulnerability actually work?
+
+See [`review/EXPECTED-SOLUTIONS.md`](review/EXPECTED-SOLUTIONS.md) -- a walkthrough of all 21
+active patterns, checked against live instances: 13 verified working with the actual exploit
+steps, 2 that can't work on any current package (version-specific CVEs, patched upstream), and
+6 with no concrete mechanism in the codebase yet (empty-config steps nothing currently
+provisions).
+
 ## Running this safely
 
 The generated VMs/containers are *deliberately* vulnerable. Build and run them on a host-only
