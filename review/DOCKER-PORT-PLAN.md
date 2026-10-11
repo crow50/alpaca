@@ -1,5 +1,8 @@
 # Containerizing the runtime: proof of concept and plan
 
+> This proof-of-concept has been productized -- see [`../docker/README.md`](../docker/README.md)
+> for the maintained version. Kept here as the original dated record.
+>
 > Companion to [`ALPACA-REVIEW.md`](ALPACA-REVIEW.md) (enhancement E7) and [`AGENTS.md`](../AGENTS.md).
 > Everything below was actually run (not just designed) in throw-away Docker containers on this machine;
 > nothing in the repo was touched, and all test containers/networks were removed afterward. The commands
