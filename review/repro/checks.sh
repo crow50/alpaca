@@ -2,7 +2,7 @@
 # Runs INSIDE the lab container (see run.sh). The repo is mounted read-only at /repo and every
 # check works on a fresh throw-away copy in /tmp/alpaca, so nothing here can modify your checkout.
 #
-#   checks.sh [all|env|goals|readme|cli|ansible|yaml|merge|api|undefined]
+#   checks.sh [all|env|goals|readme|cli|ansible|yaml|merge|api|undefined|tests]
 
 export ANSIBLE_NOCOLOR=1 ANSIBLE_LOCALHOST_WARNING=False \
        ANSIBLE_INVENTORY_UNPARSED_WARNING=False ANSIBLE_DEPRECATION_WARNINGS=False
@@ -143,6 +143,12 @@ check_undefined() {
         | sed -E 's#/tmp/alpaca/prolog/##g; s/^Warning: \[Thread main\] ?//' | grep -E '/[0-9]+, which|analysis\.pl'
 }
 
+check_tests() {
+    h "prolog/alpaca_tests.pl (plunit suite)"
+    fresh; cd /tmp/alpaca/prolog || return
+    swipl -s alpaca_tests.pl -g run_tests -t halt
+}
+
 check_cli() {
     h "How the command line behaves when something is wrong (exit code, and how much you are told)"
     fresh; cd /tmp/alpaca/prolog || return
@@ -175,7 +181,7 @@ check_goals() {
 }
 
 case "${1:-all}" in
-    env|readme|ansible|yaml|merge|api|undefined|cli|goals) "check_$1" ;;
-    all) for c in env goals readme cli ansible yaml merge api undefined; do "check_$c"; done ;;
-    *)   echo "usage: checks.sh [all|env|goals|readme|cli|ansible|yaml|merge|api|undefined]"; exit 2 ;;
+    env|readme|ansible|yaml|merge|api|undefined|cli|goals|tests) "check_$1" ;;
+    all) for c in env goals readme cli ansible yaml merge api undefined tests; do "check_$c"; done ;;
+    *)   echo "usage: checks.sh [all|env|goals|readme|cli|ansible|yaml|merge|api|undefined|tests]"; exit 2 ;;
 esac

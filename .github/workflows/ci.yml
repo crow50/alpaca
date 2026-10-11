@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  prolog-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Planner tests and review/repro's own verification suite (sandboxed, no network)
+        run: bash review/repro/run.sh all
+
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --break-system-packages ansible-lint
+      # Informational for now: there are ~106 pre-existing findings (mostly short-module-name /
+      # with_items style) tracked as its own future cleanup, not a blocking gate on every change.
+      - run: ansible-lint ansible/roles || true
+
+  packer-validate:
+    runs-on: ubuntu-latest
+    env:
+      PACKER_VERSION: "1.16.1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Packer ${{ env.PACKER_VERSION }}
+        run: |
+          curl -fsSL -o packer.zip "https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip"
+          sudo unzip -o packer.zip -d /usr/local/bin
+          rm packer.zip
+      - name: Install Ansible (the ansible provisioner shells out to ansible-playbook --version)
+        run: sudo apt-get update && sudo apt-get install -y ansible
+      - name: Generate a lattice to validate against (packer validate needs a real playbook.yml)
+        run: |
+          docker build -q -t alpaca-lab review/repro/
+          docker run --rm --network none -v "$PWD":"$PWD" -w "$PWD/prolog" alpaca-lab \
+            swipl main.pl createRangeFromIGS '[]' '[web_admin_access]' '[paramPasswordLength-8]'
+      - name: Validate (from inside the generated lattice, same as run_packer.sh)
+        run: |
+          rid=$(ls ranges | grep -v '\.zip$')
+          lat=$(ls "ranges/$rid" | grep -v json)
+          cd "ranges/$rid/$lat"
+          packer init packer/
+          packer validate packer/
+
+  docker-backend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate, provision, and bake web_admin_access
+        run: |
+          bash docker/generate-and-provision.sh '[web_admin_access]' | tee /tmp/provision.log
+      - name: Reset from the baked image and confirm the app is reachable on the published port
+        run: |
+          image=$(sed -n 's/^Baked: //p' /tmp/provision.log)
+          echo "image: $image"
+          docker run -d --name alpaca-smoke --tmpfs /tmp --tmpfs /run --tmpfs /run/lock \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host -p 8080:80 "$image" /lib/systemd/systemd
+          sleep 5
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/loginpage1-badsql/)
+          echo "HTTP $code"
+          [ "$code" = "200" ]
