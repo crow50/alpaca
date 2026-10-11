@@ -103,6 +103,17 @@ genuinely working would mean sourcing the actual historical compromised tarball 
 that's a deliberate content decision for the repo owner, not a build-tooling fix, and is exactly
 as true on the Packer/VirtualBox path as it is here.
 
+**`:unverified` doesn't mean "nothing in this lattice works" -- it's per-role, not per-step.**
+`ssh-login-root` (`PermitRootLogin yes` + the generated root password) doesn't actually depend
+on the specific OpenSSH version at all -- unlike `scan-ssh`'s user-enumeration step, which
+genuinely needs 7.6p1 for its timing behavior. Confirmed with a real login, not a dry-run: on
+a lattice that came back `:unverified` (OpenSSH `8.9p1` installed, `7.6p1` required), `ssh -p
+2222 root@localhost` with the generated password authenticated and returned a real root shell
+(`whoami` -> `root`, `uid=0(root)`). If you're checking whether a *specific* step works, test
+that step directly rather than trusting the lattice-level tag alone. Same story for
+`ssh-login-user`: logged in as a generated non-root user on an `:unverified` image and got a
+real shell (`whoami` -> that user, `uid=1000`).
+
 ## Known characteristics of this path (not bugs)
 
 - **`openssh-server` is pre-installed by `provision-and-bake.sh` when a lattice uses the
